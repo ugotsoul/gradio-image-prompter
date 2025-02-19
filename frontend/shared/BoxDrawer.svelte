@@ -139,7 +139,8 @@
       let box_width = x2 - x1;
       let box_height = y2 - y1;
 
-      let is_point = box_width < 1.0 && box_height < 1.0;
+      let is_box = box_width > 1.0 && box_height > 1.0;
+      let is_point = !is_box;
 
       if (mode == 'add') {
         let typecode = 0;

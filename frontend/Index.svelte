@@ -18,7 +18,6 @@
   import { StatusTracker } from "@gradio/statustracker";
   import type { FileData } from "@gradio/client";
   import type { LoadingStatus } from "@gradio/statustracker";
-  import { normalise_file } from "./shared/utils";
 
   export let elem_id = "";
   export let elem_classes: string[] = [];
@@ -28,14 +27,13 @@
   export let use_points = true;
 
   export let value: { image: FileData; points: number[][5] | null } | null = null;
-  $: _image = value && normalise_file(value.image, root, proxy_url);
+  $: _image = value &&  value.image; 
   $: _points = value && value.points;
 
   export let label: string;
   export let show_label: boolean;
   export let show_download_button: boolean;
   export let root: string;
-  export let proxy_url: null | string;
 
   export let height: number | undefined;
   export let width: number | undefined;

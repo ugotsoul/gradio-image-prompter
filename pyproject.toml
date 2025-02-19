@@ -13,11 +13,11 @@ description = "A gradio component to upload images and process point/box prompts
 readme = "README.md"
 license = "apache-2.0"
 requires-python = ">=3.8"
-url = "https://github.com/PhyscalX/gradio-image-prompter"
-authors = [{ name = "PhyscalX", email = "neopenx@gmail.com" }]
+url = "https://github.com/twjang/gradio-image-prompter"
+authors = [{ name = "PhyscalX", email = "neopenx@gmail.com" }, { name = "twjang", email = "nyamnyam7@gmail.com"}]
 keywords = ["gradio-custom-component", "gradio-template-Image"]
 # Add dependencies here
-dependencies = ["gradio>=4.0,<5.0"]
+dependencies = ["gradio>=5.0.0,<6.0.0"]
 classifiers = [
   'Development Status :: 3 - Alpha',
   'License :: OSI Approved :: Apache Software License',

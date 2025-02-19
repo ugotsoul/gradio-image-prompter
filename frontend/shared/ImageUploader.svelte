@@ -8,7 +8,6 @@
 		type I18nFormatter,
 		type ValueData
 	} from "@gradio/utils";
-	import { get_coordinates_of_clicked_image } from "./utils";
 
 	import { Upload } from "@gradio/upload";
 	import { Client, FileData } from "@gradio/client";
@@ -17,7 +16,7 @@
 	import BoxDrawer from "./BoxDrawer.svelte";
 
 	export let value: null | FileData = null;
-  export let points: null | number[][6];
+  	export let points: null | number[][5];
 	export let label: string | undefined = undefined;
 	export let show_label: boolean;
 	export let upload: Client["upload"];
@@ -108,7 +107,7 @@
 		upload: FileData;
 		select: SelectData;
 		end_stream: never;
-		points_change: number[][6];
+		points_change: number[][5];
 	}>();
 
   	let box_drawer: BoxDrawer;
@@ -116,14 +115,6 @@
 	export let dragging = false;
 
 	$: dispatch("drag", dragging);
-
-	function handle_click(evt: MouseEvent): void {
-		let coordinates = get_coordinates_of_clicked_image(evt);
-    console.log(coordinates);
-		if (coordinates) {
-			dispatch("select", { index: coordinates, value: null });
-		}
-	}
 
 	$: if (!active_source && sources) {
 		active_source = sources[0];
@@ -140,9 +131,6 @@
 				break;
 		}
 	}
-
-  function handle_stream(url: URL): void {
-  }
 
 	let image_container: HTMLElement;
 </script>
@@ -192,7 +180,7 @@
 			{root}
 			{max_file_size}
 			disable_click={!sources.includes("upload") || value !== null}
-      { upload }
+			{ upload }
 			{ stream_handler }
 			aria_label={i18n("image.drop_to_upload")}
 		>
@@ -210,7 +198,7 @@
 			use_boxes={use_boxes}
 			use_points={use_points}
 		>
-          <img src={value.url} alt={value.alt_text} on:click={handle_click} on:load={handle_image_load} />
+          <img src={value.url} alt={value.alt_text} on:load={handle_image_load} />
         </BoxDrawer>
 			</div>
 		{/if}
