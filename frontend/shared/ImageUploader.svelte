@@ -1,192 +1,273 @@
 <script lang="ts">
-  import { createEventDispatcher } from "svelte";
-  import { BlockLabel } from "@gradio/atoms";
-  import { Image } from "@gradio/icons";
-  import type { I18nFormatter } from "@gradio/utils";
-  import { get_coordinates_of_clicked_image } from "./utils";
-  import { ImagePaste, Upload as UploadIcon } from "@gradio/icons";
-  import { Toolbar, IconButton } from "@gradio/atoms";
+	import { createEventDispatcher, tick } from "svelte";
+	import { BlockLabel, IconButtonWrapper, IconButton } from "@gradio/atoms";
+	import { Clear, Erase, Image as ImageIcon } from "@gradio/icons";
+	import { FullscreenButton } from "@gradio/atoms";
+	import {
+		type SelectData,
+		type I18nFormatter,
+		type ValueData
+	} from "@gradio/utils";
+	import { get_coordinates_of_clicked_image } from "./utils";
 
-  import { Upload } from "@gradio/upload";
-  import { type FileData, normalise_file } from "@gradio/client";
-  import ClearImage from "./ClearImage.svelte";
-  import BoxDrawer from "./BoxDrawer.svelte";
+	import { Upload } from "@gradio/upload";
+	import { Client, FileData } from "@gradio/client";
+	import { SelectSource } from "@gradio/atoms";
+	import Image from "./Image.svelte";
+	import BoxDrawer from "./BoxDrawer.svelte";
 
-  const dispatch = createEventDispatcher();
-  let box_drawer: BoxDrawer;
-
-  export let value: null | FileData;
+	export let value: null | FileData = null;
   export let points: null | number[][6];
-  export let label: string | undefined = undefined;
-  export let show_label: boolean;
+	export let label: string | undefined = undefined;
+	export let show_label: boolean;
+	export let upload: Client["upload"];
+	export let stream_handler: Client["stream"];
 
-  function handle_image_load(event: Event) {
-    const element = event.currentTarget as HTMLImageElement;
-    box_drawer.width = element.width;
-    box_drawer.height = element.height;
-    box_drawer.natural_width = element.naturalWidth;
-    box_drawer.natural_height = element.naturalHeight;
-    box_drawer.resize_canvas();
+	export let use_boxes = true;
+	export let use_points = false;
+
+	type source_type = "upload" | "webcam" | "clipboard" | "microphone" | null;
+
+	export let sources: source_type[] = ["upload", "clipboard"];
+	export let streaming = false;
+	export let pending = false;
+	export let selectable = false;
+	export let root: string;
+	export let i18n: I18nFormatter;
+	export let max_file_size: number | null = null;
+	export let show_fullscreen_button = true;
+
+	let upload_input: Upload;
+	export let uploading = false;
+	export let active_source: source_type = null;
+
+
+	function handle_image_load(event: Event) {
+		const element = event.currentTarget as HTMLImageElement;
+		box_drawer.width = element.width;
+		box_drawer.height = element.height;
+		box_drawer.natural_width = element.naturalWidth;
+		box_drawer.natural_height = element.naturalHeight;
+		box_drawer.resize_canvas();
+	}
+
+	function handle_prompt_change({ detail }: { detail: number[][5] }) {
+		points = detail;
+		dispatch("points_change", detail);
+	}
+
+	async function handle_upload({
+		detail
+	}: CustomEvent<FileData>): Promise<void> {
+		if (!streaming) {
+			if (detail.path?.toLowerCase().endsWith(".svg") && detail.url) {
+				const response = await fetch(detail.url);
+				const svgContent = await response.text();
+				value = {
+					...detail,
+					url: `data:image/svg+xml,${encodeURIComponent(svgContent)}`
+				};
+			} else {
+				value = detail;
+			}
+			dispatch("upload", detail);
+		}
+	}
+
+	function handle_clear(): void {
+		value = null;
+		dispatch("clear");
+		dispatch("change", null);
+	}
+
+	async function handle_save(
+		img_blob: Blob | any,
+		event: "change" | "upload"
+	): Promise<void> {
+		pending = true;
+		const f = await upload_input.load_files([
+			new File([img_blob], `image/${streaming ? "jpeg" : "png"}`)
+		]);
+
+		if (event === "change" || event === "upload") {
+			value = f?.[0] || null;
+			await tick();
+			dispatch("change");
+		}
+		pending = false;
+	}
+
+	$: active_streaming = streaming && active_source === "webcam";
+	$: if (uploading && !active_streaming) value = null;
+
+	const dispatch = createEventDispatcher<{
+		change?: never;
+		stream: ValueData;
+		clear?: never;
+		drag: boolean;
+		upload: FileData;
+		select: SelectData;
+		end_stream: never;
+		points_change: number[][6];
+	}>();
+
+  	let box_drawer: BoxDrawer;
+
+	export let dragging = false;
+
+	$: dispatch("drag", dragging);
+
+	function handle_click(evt: MouseEvent): void {
+		let coordinates = get_coordinates_of_clicked_image(evt);
+    console.log(coordinates);
+		if (coordinates) {
+			dispatch("select", { index: coordinates, value: null });
+		}
+	}
+
+	$: if (!active_source && sources) {
+		active_source = sources[0];
+	}
+
+	async function handle_select_source(
+		source: (typeof sources)[number]
+	): Promise<void> {
+		switch (source) {
+			case "clipboard":
+				upload_input.paste_clipboard();
+				break;
+			default:
+				break;
+		}
+	}
+
+  function handle_stream(url: URL): void {
   }
 
-  function handle_points_change({ detail }: { detail: number[][6] }) {
-    points = detail;
-    dispatch("points_change", detail);
-  }
-
-  export let sources: ("clipboard" | "upload")[] = ["upload", "clipboard"];
-  export let streaming = false;
-  export let root: string;
-  export let i18n: I18nFormatter;
-
-  let upload: Upload;
-  let uploading = false;
-  export let active_tool: "webcam" | null = null;
-
-  function handle_upload({ detail }: CustomEvent<FileData>): void {
-    value = normalise_file(detail, root, null);
-    dispatch("upload", detail);
-  }
-
-  $: if (uploading) value = null;
-  $: value && !value.url && (value = normalise_file(value, root, null));
-
-  let dragging = false;
-  $: dispatch("drag", dragging);
-
-  function handle_click(evt: MouseEvent): void {
-    let coordinates = get_coordinates_of_clicked_image(evt);
-    if (coordinates) {
-      dispatch("select", { index: coordinates, value: null });
-    }
-  }
-
-  const sources_meta = {
-    upload: {
-      icon: UploadIcon,
-      label: i18n("Upload"),
-      order: 0,
-    },
-    clipboard: {
-      icon: ImagePaste,
-      label: i18n("Paste"),
-      order: 2,
-    },
-  };
-
-  $: sources_list = sources.sort(
-    (a, b) => sources_meta[a].order - sources_meta[b].order,
-  );
-
-  async function handle_toolbar(
-    source: (typeof sources)[number],
-  ): Promise<void> {
-    switch (source) {
-      case "clipboard":
-        navigator.clipboard.read().then(async (items) => {
-          for (let i = 0; i < items.length; i++) {
-            const type = items[i].types.find((t) => t.startsWith("image/"));
-            if (type) {
-              value = null;
-              items[i].getType(type).then(async (blob) => {
-                const f = await upload.load_files([
-                  new File([blob], `clipboard.${type.replace("image/", "")}`),
-                ]);
-                f;
-                value = f?.[0] || null;
-              });
-              break;
-            }
-          }
-        });
-        break;
-      case "upload":
-        upload.open_file_upload();
-        break;
-      default:
-        break;
-    }
-  }
+	let image_container: HTMLElement;
 </script>
 
-<BlockLabel {show_label} Icon={Image} label={label || "Image"} />
+<BlockLabel {show_label} Icon={ImageIcon} label={label || "Image"} />
 
-<div data-testid="image" class="image-container">
-  {#if value?.url}
-    <ClearImage
-      on:remove_box={() => {
-        box_drawer.undo();
-      }}
-      on:remove_boxes={() => {
-        box_drawer.clear();
-      }}
-      on:remove_image={() => {
-        value = null;
-        dispatch("clear");
-      }}
-    />
-  {/if}
-  <div class="upload-container">
-    <Upload
-      hidden={value !== null || active_tool === "webcam"}
-      bind:this={upload}
-      bind:uploading
-      bind:dragging
-      filetype="image/*"
-      on:load={handle_upload}
-      on:error
-      {root}
-      disable_click={!sources.includes("upload")}
-    >
-      {#if value === null && !active_tool}
-        <slot />
-      {/if}
-    </Upload>
-    {#if value !== null && !streaming}
-      <!-- svelte-ignore a11y-click-events-have-key-events-->
-      <!-- svelte-ignore a11y-no-noninteractive-element-interactions-->
-      <img
-        src={value.url}
-        alt={value.alt_text}
-        on:click={handle_click}
-        on:load={handle_image_load}
+<div data-testid="image" class="image-container" bind:this={image_container}>
+	<IconButtonWrapper style="z-index: 2;">
+		{#if value?.url && !active_streaming}
+			{#if show_fullscreen_button}
+				<FullscreenButton container={image_container} />
+			{/if}
+
+      <IconButton
+        Icon={Erase}
+        label="Remove All boxes"
+        on:click={(event) => {
+          box_drawer.clear();
+					event.stopPropagation();
+        }}
       />
-      <BoxDrawer bind:this={box_drawer} on:change={handle_points_change} />
+
+      <IconButton
+        Icon={Clear}
+        label="Remove Image"
+        on:click={(event) => {
+          value = null;
+          dispatch("clear");
+					event.stopPropagation();
+        }}
+      />
     {/if}
-  </div>
-  {#if sources.length > 1 || sources.includes("clipboard")}
-    <Toolbar show_border={!value?.url}>
-      {#each sources_list as source}
-        <IconButton
-          on:click={() => handle_toolbar(source)}
-          Icon={sources_meta[source].icon}
-          size="large"
-          label="{source}-image-toolbar-btn"
-          padded={false}
-        />
-      {/each}
-    </Toolbar>
-  {/if}
+	</IconButtonWrapper>
+	<div
+		class="upload-container"
+		class:reduced-height={sources.length > 1}
+		style:width={value ? "auto" : "100%"}
+	>
+		<Upload
+			hidden={value !== null}
+			bind:this={upload_input}
+			bind:uploading
+			bind:dragging
+			filetype={active_source === "clipboard" ? "clipboard" : "image/*"}
+			on:load={handle_upload}
+			on:error
+			{root}
+			{max_file_size}
+			disable_click={!sources.includes("upload") || value !== null}
+      { upload }
+			{ stream_handler }
+			aria_label={i18n("image.drop_to_upload")}
+		>
+			{#if value === null}
+				<slot />
+			{/if}
+		</Upload>
+		{#if value !== null && !streaming}
+			<!-- svelte-ignore a11y-click-events-have-key-events-->
+			<div class:selectable class="image-frame">
+        <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+        <BoxDrawer 
+			bind:this={box_drawer} 
+			on:change={handle_prompt_change}
+			use_boxes={use_boxes}
+			use_points={use_points}
+		>
+          <img src={value.url} alt={value.alt_text} on:click={handle_click} on:load={handle_image_load} />
+        </BoxDrawer>
+			</div>
+		{/if}
+	</div>
+	{#if sources.length > 1 || sources.includes("clipboard")}
+		<SelectSource
+			{sources}
+			bind:active_source
+			{handle_clear}
+			handle_select={handle_select_source}
+		/>
+	{/if}
 </div>
 
 <style>
-  img {
-    width: var(--size-full);
-    height: var(--size-full);
-  }
+	.image-frame :global(img) {
+		width: var(--size-full);
+		height: var(--size-full);
+		object-fit: fill;
+	}
 
-  .upload-container {
-    height: 100%;
-    flex-shrink: 1;
-    max-height: 100%;
-  }
+	img {
+		width: var(--size-full);
+		height: var(--size-full);
+	}
 
-  .image-container {
-    display: flex;
-    height: 100%;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    max-height: 100%;
-  }
+
+	.image-frame {
+		object-fit: cover;
+		width: 100%;
+		height: 100%;
+	}
+
+	.upload-container {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+
+		height: 100%;
+		flex-shrink: 1;
+		max-height: 100%;
+	}
+
+	.reduced-height {
+		height: calc(100% - var(--size-10));
+	}
+
+	.image-container {
+		display: flex;
+		height: 100%;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		max-height: 100%;
+	}
+
+	.selectable {
+		cursor: crosshair;
+	}
 </style>

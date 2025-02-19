@@ -68,6 +68,8 @@ class ImagePrompter(gradio.Image):
         elem_classes: list[str] | str | None = None,
         render: bool = True,
         show_share_button: bool | None = None,
+        use_boxes: bool = True,
+        use_points: bool = True,
     ):
         """
         Parameters:
@@ -86,11 +88,9 @@ class ImagePrompter(gradio.Image):
             min_width: minimum pixel width, will wrap if not sufficient screen space to satisfy this value.
             interactive: if True, will allow users to upload and edit an image; if False, can only be used to display images.
             visible: If False, component will be hidden.
-            streaming: If True when used in a `live` interface, will automatically stream webcam feed. Only valid is source is 'webcam'.
             elem_id: An optional string that is assigned as the id of this component in the HTML DOM.
             elem_classes: An optional list of strings that are assigned as the classes of this component in the HTML DOM.
             render: If False, component will not render be rendered in the Blocks context.
-            mirror_webcam: If True webcam will be mirrored. Default is True.
             show_share_button: If True, show a share icon that allows user to share outputs to Hugging Face Spaces Discussions.
         """
         super(ImagePrompter, self).__init__(
@@ -114,6 +114,9 @@ class ImagePrompter(gradio.Image):
             render=render,
             show_share_button=show_share_button,
         )
+        self.use_boxes = use_boxes
+        self.use_points = use_points
+
 
     def preprocess(self, x: PromptData) -> PromptValue | None:
         if x is None:

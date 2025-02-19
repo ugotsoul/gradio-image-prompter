@@ -7,22 +7,33 @@
   "license": "ISC",
   "private": false,
   "dependencies": {
-    "@gradio/atoms": "0.3.1",
-    "@gradio/client": "0.8.2",
-    "@gradio/icons": "0.3.1",
-    "@gradio/statustracker": "0.4.1",
-    "@gradio/upload": "0.5.2",
-    "@gradio/utils": "0.2.0",
-    "@gradio/wasm": "0.3.0",
+    "@gradio/atoms": "^0.13.2",
+    "@gradio/client": "^1.12.0",
+    "@gradio/icons": "^0.10.0",
+    "@gradio/statustracker": "^0.10.3",
+    "@gradio/upload": "^0.15.1",
+    "@gradio/utils": "^0.10.1",
+    "@gradio/wasm": "^0.17.3",
     "cropperjs": "^1.5.12",
-    "lazy-brush": "^1.0.1",
+    "lazy-brush": "^2.0.2",
     "resize-observer-polyfill": "^1.5.1"
   },
   "main_changeset": true,
   "main": "./Index.svelte",
   "exports": {
-    ".": "./Index.svelte",
-    "./example": "./Example.svelte",
+    ".": {
+      "gradio": "./Index.svelte"
+    },
+    "./example": {
+      "gradio": "./Example.svelte"
+    },
     "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "@gradio/preview": "^0.13.0",
+    "@tsconfig/svelte": "^5.0.4",
+    "svelte-preprocess": "^6.0.3",
+    "typescript": "^5.7.3",
+    "vite-plugin-commonjs": "^0.10.4"
   }
 }

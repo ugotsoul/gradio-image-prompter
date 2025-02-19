@@ -8,7 +8,7 @@
   export { default as BoxDrawer } from "./shared/BoxDrawer.svelte";
 </script>
 
-<script lang="ts">
+<script lang="ts", >
   import type { Gradio, SelectData } from "@gradio/utils";
   import StaticImage from "./shared/ImagePreview.svelte";
   import ImageUploader from "./shared/ImageUploader.svelte";
@@ -18,13 +18,16 @@
   import { StatusTracker } from "@gradio/statustracker";
   import type { FileData } from "@gradio/client";
   import type { LoadingStatus } from "@gradio/statustracker";
-  import { normalise_file } from "@gradio/client";
+  import { normalise_file } from "./shared/utils";
 
   export let elem_id = "";
   export let elem_classes: string[] = [];
   export let visible = true;
 
-  export let value: { image: FileData; points: number[][6] } | null = null;
+  export let use_boxes = true;
+  export let use_points = true;
+
+  export let value: { image: FileData; points: number[][5] | null } | null = null;
   $: _image = value && normalise_file(value.image, root, proxy_url);
   $: _points = value && value.points;
 
@@ -63,7 +66,6 @@
   $: url && gradio.dispatch("change");
 
   let dragging: boolean;
-  let active_tool: null | "webcam" = null;
 </script>
 
 {#if !interactive}
@@ -121,12 +123,13 @@
     />
 
     <ImageUploader
-      bind:active_tool
       bind:value={_image}
       bind:points={_points}
       {root}
       {sources}
-      on:points_change={({ detail }) => (value.points = detail)}
+      use_points={use_points}
+      use_boxes={use_boxes}
+      on:points_change={({ detail }) =>  {if (value) value.points = detail; }}
       on:edit={() => gradio.dispatch("edit")}
       on:clear={() => {
         value = null;
@@ -156,6 +159,8 @@
       {show_label}
       {streaming}
       i18n={gradio.i18n}
+      upload={(...args) => gradio.client.upload(...args)}
+			stream_handler={gradio.client?.stream}
     >
       {#if sources.includes("upload")}
         <UploadText i18n={gradio.i18n} type="image" mode="short" />
