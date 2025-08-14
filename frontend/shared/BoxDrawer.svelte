@@ -290,10 +290,10 @@
     ctx.beginPath();
     if (!highlighted) {
       ctx.strokeStyle = "#000";
-      ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+      ctx.fillStyle = "rgba(90, 224, 132, 0.3)";
     } else {
       ctx.strokeStyle = "#F00";
-      ctx.fillStyle = "rgba(60, 0, 0, 0.3)";
+      ctx.fillStyle = "rgba(90, 224, 132, 0.3)";
     }
     ctx.rect(x1, y1, x2 - x1, y2 - y1);
     ctx.fill();
