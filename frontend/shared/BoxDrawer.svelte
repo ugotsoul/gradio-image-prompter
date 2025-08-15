@@ -288,8 +288,8 @@
 
     ctx.beginPath();
     if (!highlighted) {
-      ctx.strokeStyle = "#000";
-      ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+      ctx.strokeStyle = "#b700ffff";
+      ctx.fillStyle = "rgba(125, 0, 227, 0.4)";
     } else {
       ctx.strokeStyle = "#F00";
       ctx.fillStyle = "rgba(60, 0, 0, 0.3)";
